@@ -1,0 +1,283 @@
+services:
+  auth_db:
+    image: postgres:17-alpine
+    container_name: sgau_auth_db_gateway
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Yesid270318b
+      POSTGRES_DB: sgau_auth
+    ports:
+      - "5433:5432"
+    volumes:
+      - auth_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sgau_auth"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - sgau-gateway-net
+
+  user_db:
+    image: postgres:17-alpine
+    container_name: sgau_user_db_gateway
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sgau_users
+    ports:
+      - "5432:5432"
+    volumes:
+      - user_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sgau_users"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - sgau-gateway-net
+  course_db:
+    image: postgres:17-alpine
+    container_name: sgau_course_db_gateway
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sgau_courses
+    ports:
+      - "5434:5432"
+    volumes:
+      - course_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sgau_courses"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - sgau-gateway-net
+
+  enrollment_db:
+    image: postgres:17-alpine
+    container_name: sgau_enrollment_db_gateway
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sgau_enrollment
+    ports:
+      - "5435:5432"
+    volumes:
+      - enrollment_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sgau_enrollment"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - sgau-gateway-net
+
+  grades_db:
+    image: postgres:17-alpine
+    container_name: sgau_grades_db_gateway
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sgau_grades
+    ports:
+      - "5436:5432"
+    volumes:
+      - grades_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sgau_grades"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - sgau-gateway-net
+
+  student_db:
+    image: postgres:17-alpine
+    container_name: sgau_student_db_gateway
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sgau_students
+    ports:
+      - "5437:5432"
+    volumes:
+      - student_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sgau_students"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - sgau-gateway-net
+
+  auth_backend:
+    build:
+      context: "../Auth service/backend"
+      dockerfile: Dockerfile
+    container_name: auth_backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:Yesid270318b@auth_db:5432/sgau_auth
+      SECRET_KEY: sgau-super-secret-jwt-key-min-32-chars-for-production-use
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      FRONTEND_ORIGIN: http://localhost:5173
+      USER_SERVICE_URL: http://user_backend:8000
+    volumes:
+      - ../Auth service/backend:/app
+    depends_on:
+      auth_db:
+        condition: service_healthy
+      user_backend:
+        condition: service_started
+    networks:
+      - sgau-gateway-net
+
+  user_backend:
+    build:
+      context: "../User Service/backend"
+      dockerfile: Dockerfile
+    container_name: user_backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@user_db:5432/sgau_users
+      FRONTEND_ORIGIN: http://localhost:5173
+      SECRET_KEY: sgau-super-secret-jwt-key-min-32-chars-for-production-use
+    volumes:
+      - ../User Service/backend:/app
+    depends_on:
+      user_db:
+        condition: service_healthy
+    networks:
+      - sgau-gateway-net
+
+  course_backend:
+    build:
+      context: "../Course Service/backend"
+      dockerfile: Dockerfile
+    container_name: course_backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@course_db:5432/sgau_courses
+      SECRET_KEY: sgau-super-secret-jwt-key-min-32-chars-for-production-use
+      FRONTEND_ORIGIN: http://localhost:5173
+      USER_SERVICE_URL: http://user_backend:8000
+    volumes:
+      - "../Course Service/backend:/app"
+    depends_on:
+      course_db:
+        condition: service_healthy
+      user_backend:
+        condition: service_started
+    networks:
+      - sgau-gateway-net
+
+  enrollment_backend:
+    build:
+      context: "../Enrollment Service/backend"
+      dockerfile: Dockerfile
+    container_name: enrollment_backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@enrollment_db:5432/sgau_enrollment
+      SECRET_KEY: sgau-super-secret-jwt-key-min-32-chars-for-production-use
+      COURSE_SERVICE_URL: http://course_backend:8000
+      FRONTEND_ORIGIN: http://localhost:5173
+    volumes:
+      - "../Enrollment Service/backend:/app"
+    depends_on:
+      enrollment_db:
+        condition: service_healthy
+      course_backend:
+        condition: service_started
+    networks:
+      - sgau-gateway-net
+
+  grades_backend:
+    build:
+      context: "../Grades Service/backend"
+      dockerfile: Dockerfile
+    container_name: grades_backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@grades_db:5432/sgau_grades
+      SECRET_KEY: sgau-super-secret-jwt-key-min-32-chars-for-production-use
+      ENROLLMENT_SERVICE_URL: http://enrollment_backend:8000
+      FRONTEND_ORIGIN: http://localhost:5173
+    volumes:
+      - "../Grades Service/backend:/app"
+    depends_on:
+      grades_db:
+        condition: service_healthy
+      enrollment_backend:
+        condition: service_started
+    networks:
+      - sgau-gateway-net
+
+  student_backend:
+    build:
+      context: "../Student Service/backend"
+      dockerfile: Dockerfile
+    container_name: student_backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@student_db:5432/sgau_students
+      SECRET_KEY: sgau-super-secret-jwt-key-min-32-chars-for-production-use
+      FRONTEND_ORIGIN: http://localhost:5173
+    volumes:
+      - "../Student Service/backend:/app"
+    depends_on:
+      student_db:
+        condition: service_healthy
+    networks:
+      - sgau-gateway-net
+
+  kong:
+    image: kong:3.7
+    container_name: sgau_kong
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    volumes:
+      - ./kong.yml:/usr/local/kong/declarative/kong.yml:ro
+    ports:
+      - "8000:8000"
+      - "8004:8001"
+    depends_on:
+      - auth_backend
+      - user_backend
+      - course_backend
+      - enrollment_backend
+      - grades_backend
+      - student_backend
+    networks:
+      - sgau-gateway-net
+
+  frontend:
+    build:
+      context: "../User Service/frontend"
+      dockerfile: Dockerfile
+    container_name: sgau_frontend_gateway
+    environment:
+      VITE_API_URL: http://localhost:8000
+    volumes:
+      - ../User Service/frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - kong
+    networks:
+      - sgau-gateway-net
+
+volumes:
+  auth_db_data:
+  user_db_data:
+  course_db_data:
+  enrollment_db_data:
+  grades_db_data:
+  student_db_data:
+
+networks:
+  sgau-gateway-net:
+    driver: bridge

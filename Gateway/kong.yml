@@ -1,0 +1,75 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: auth-service
+    url: http://auth_backend:8001
+    routes:
+      - name: auth-routes
+        paths:
+          - /auth
+        strip_path: false
+
+  - name: user-service
+    url: http://user_backend:8000
+    routes:
+      - name: user-routes
+        paths:
+          - /users
+        strip_path: false
+
+  - name: course-service
+    url: http://course_backend:8000
+    routes:
+      - name: course-routes
+        paths:
+          - /courses
+        strip_path: false
+
+  - name: enrollment-service
+    url: http://enrollment_backend:8000
+    routes:
+      - name: enrollment-routes
+        paths:
+          - /enrollments
+        strip_path: false
+
+  - name: grades-service
+    url: http://grades_backend:8000
+    routes:
+      - name: grades-routes
+        paths:
+          - /grades
+        strip_path: false
+
+  - name: student-service
+    url: http://student_backend:8000
+    routes:
+      - name: student-routes
+        paths:
+          - /students
+        strip_path: false
+
+plugins:
+  - name: cors
+    config:
+      origins:
+        - http://localhost:5173
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - Authorization
+      exposed_headers:
+        - X-Auth-Token
+      credentials: true
+      max_age: 3600

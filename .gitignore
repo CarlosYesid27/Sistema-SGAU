@@ -1,0 +1,17 @@
+node_modules/
+__pycache__/
+.venv/
+venv/
+env/
+*.pyc
+*.pyo
+*.pyd
+.env
+.DS_Store
+Thumbs.db
+logs*.txt
+*.log
+coverage/
+.nyc_output/
+build/
+dist/
