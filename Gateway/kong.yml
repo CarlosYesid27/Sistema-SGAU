@@ -50,6 +50,14 @@ services:
           - /students
         strip_path: false
 
+  - name: payment-service
+    url: http://payment_backend:8000
+    routes:
+      - name: payment-routes
+        paths:
+          - /payments
+        strip_path: false
+
 plugins:
   - name: cors
     config:

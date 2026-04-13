@@ -9,6 +9,8 @@ import EnrollmentManager from './components/EnrollmentManager'
 import GradesView from './components/GradesView'
 import TeacherGradesView from './components/TeacherGradesView'
 import StudentHistoryView from './components/StudentHistoryView'
+import OfferManager from './components/OfferManager'
+import PaymentWidget from './components/PaymentWidget'
 import { authApi, authStorage, usersApi } from './services/api'
 
 export default function App() {
@@ -235,6 +237,16 @@ export default function App() {
                   </svg>
                   <span>Materias</span>
                 </button>
+                <button 
+                  type="button"
+                  className={adminTab === 'offers' ? 'tab-btn active' : 'tab-btn'} 
+                  onClick={() => setAdminTab('offers')}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 256 256">
+                    <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,160H40V56H216V200Zm-24-40a8,8,0,0,1-8,8H72a8,8,0,0,1,0-16H184A8,8,0,0,1,192,160Zm0-40a8,8,0,0,1-8,8H72a8,8,0,0,1,0-16H184A8,8,0,0,1,192,120Zm0-40a8,8,0,0,1-8,8H72a8,8,0,0,1,0-16H184A8,8,0,0,1,192,80Z"></path>
+                  </svg>
+                  <span>Oferta Académica</span>
+                </button>
               </>
             ) : userRole === 'docente' ? (
               <>
@@ -301,6 +313,16 @@ export default function App() {
                   </svg>
                   <span>Mi Perfil</span>
                 </button>
+                <button 
+                  type="button"
+                  className={studentTab === 'payments' ? 'tab-btn active' : 'tab-btn'} 
+                  onClick={() => setStudentTab('payments')}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 256 256">
+                    <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm8,144h-8a8,8,0,0,1,0-16h8a24,24,0,0,0,0-48h-8V88a8,8,0,0,0-16,0v16h-8a8,8,0,0,0,0,16h8a8,8,0,0,1,0,16h-8a24,24,0,0,0,0,48h8v16a8,8,0,0,0,16,0V184h8A8,8,0,0,0,136,168Z"></path>
+                  </svg>
+                  <span>Mis Pagos</span>
+                </button>
               </>
             )}
             
@@ -320,17 +342,17 @@ export default function App() {
           <div>
             <h1>
               SGAU · {userRole === 'admin'
-                ? (adminTab === 'users' ? 'Gestión de Usuarios' : 'Catálogo de Materias')
+                ? (adminTab === 'users' ? 'Gestión de Usuarios' : adminTab === 'courses' ? 'Catálogo de Materias' : 'Oferta Académica')
                 : userRole === 'docente'
                 ? (teacherTab === 'grades' ? 'Calificaciones' : 'Mi Perfil')
-                : (studentTab === 'enrollments' ? 'Proceso de Inscripción' : studentTab === 'grades' ? 'Mis Calificaciones' : studentTab === 'history' ? 'Historial Académico' : 'Mi Perfil Estudiantil')}
+                : (studentTab === 'enrollments' ? 'Proceso de Inscripción' : studentTab === 'grades' ? 'Mis Calificaciones' : studentTab === 'history' ? 'Historial Académico' : studentTab === 'payments' ? 'Centro de Pagos' : 'Mi Perfil Estudiantil')}
             </h1>
             <p className="subtitle">
               {userRole === 'admin' 
-                ? (adminTab === 'users' ? 'Usuarios registrados en sistema activo (solo listar, editar y eliminar).' : 'Administra inscripciones, prerrequisitos y docentes académicos.')
+                ? (adminTab === 'users' ? 'Usuarios registrados en sistema activo (solo listar, editar y eliminar).' : adminTab === 'courses' ? 'Administra inscripciones, prerrequisitos y docentes académicos.' : 'Gestiona la disponibilidad y el momento de oferta de las materias.')
                 : userRole === 'docente'
                 ? (teacherTab === 'grades' ? 'Ingresa y gestiona las calificaciones de tus estudiantes.' : 'Información personal y credenciales.')
-                : (studentTab === 'enrollments' ? 'Inscríbete en las materias ofertadas para este semestre.' : studentTab === 'grades' ? 'Consulta tus notas y promedio acumulado.' : studentTab === 'history' ? 'Revisa tu progreso académico y nivel de aprobación histórico.' : 'Información personal y credenciales.')}
+                : (studentTab === 'enrollments' ? 'Inscríbete en las materias ofertadas para este semestre.' : studentTab === 'grades' ? 'Consulta tus notas y promedio acumulado.' : studentTab === 'history' ? 'Revisa tu progreso académico y nivel de aprobación histórico.' : studentTab === 'payments' ? 'Paga tus liquidaciones y recargos con Wompi.' : 'Información personal y credenciales.')}
             </p>
           </div>
           <div className="actions">
@@ -346,8 +368,10 @@ export default function App() {
                 {editingUser && <UserForm editingUser={editingUser} onSubmit={handleSubmit} onCancel={() => setEditingUser(null)} />}
                 <UserTable users={users} onEdit={setEditingUser} onDelete={requestDeleteUser} userRole={userRole} />
               </>
-            ) : (
+            ) : adminTab === 'courses' ? (
               <CourseManager />
+            ) : (
+              <OfferManager />
             )}
           </>
         ) : userRole === 'docente' ? (
@@ -362,6 +386,8 @@ export default function App() {
               ? <GradesView />
               : studentTab === 'history'
               ? <StudentHistoryView user={me} />
+              : studentTab === 'payments'
+              ? <PaymentWidget />
               : <ProfileView user={me} />}
           </>
         ) : (

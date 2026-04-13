@@ -125,6 +125,27 @@ async def list_course_students(
     """Lista todos los registros de inscripción de un curso (Para docentes y admins)."""
     return crud.get_enrollments_by_course(db, course_id)
 
+@router.patch("/payments/{payment_id}/status")
+async def update_payment_commitment_status(
+    payment_id: int,
+    status_update: dict,
+    _current_user: TokenPayload = Depends(verify_staff), # Asumimos token M2M generado por admin
+    db: Session = Depends(get_db)
+):
+    """Actualiza el estado de un compromiso de pago (Llamado via M2M desde Payment Service)."""
+    new_status = status_update.get("status")
+    if new_status not in ["PAID", "CANCELLED", "PENDING_PAYMENT"]:
+        raise HTTPException(status_code=400, detail="Estado de pago inválido.")
+        
+    payment = crud.update_payment_status(db, payment_id, new_status)
+    if not payment:
+        raise HTTPException(status_code=404, detail="Compromiso de pago no encontrado.")
+        
+    # Si se pagó exitosamente, enroll the student
+    if new_status == "PAID":
+        crud.update_enrollment_status(db, payment.enrollment_id, "ENROLLED")
+        
+    return payment
 
 @router.put("/{enrollment_id}/status", response_model=schemas.EnrollmentResponse)
 async def update_status(

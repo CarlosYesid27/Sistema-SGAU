@@ -39,7 +39,10 @@ async def list_courses(
     db: Session = Depends(get_db)
 ):
     """Listar todas las materias (Todos los autenticados)"""
-    return crud.get_courses(db, skip=skip, limit=limit)
+    courses = crud.get_courses(db, skip=skip, limit=limit)
+    if _current_user.role == "estudiante":
+        courses = [c for c in courses if c.is_offered]
+    return courses
 
 @router.get("/{course_id}", response_model=schemas.CourseResponseDetail)
 async def get_course(

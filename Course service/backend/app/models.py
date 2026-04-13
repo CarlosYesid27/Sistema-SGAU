@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -14,6 +14,7 @@ class Course(Base):
     schedule = Column(String(100), nullable=True)
     teacher_id = Column(Integer, nullable=True) # Referencia al User Service
     academic_program = Column(String(100), nullable=True)  # Programa al que pertenece la materia
+    is_offered = Column(Boolean, default=False)
     
     # Self-referential many-to-many relationship for prerequisites
     prerequisites = relationship(

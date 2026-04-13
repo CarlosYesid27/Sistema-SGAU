@@ -9,6 +9,7 @@ class CourseBase(BaseModel):
     schedule: Optional[str] = None
     teacher_id: Optional[int] = None
     academic_program: Optional[str] = None  # Programa al que se oferta la materia
+    is_offered: bool = False
 
 # --- Course Creation ---
 class CourseCreate(CourseBase):
@@ -22,6 +23,7 @@ class CourseUpdate(BaseModel):
     schedule: Optional[str] = None
     teacher_id: Optional[int] = None
     academic_program: Optional[str] = None
+    is_offered: Optional[bool] = None
 
 # --- Course Prerequisite ---
 class PrerequisiteCreate(BaseModel):

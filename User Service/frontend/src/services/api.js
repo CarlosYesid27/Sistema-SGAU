@@ -60,19 +60,19 @@ export const enrollmentApi = {
 }
 
 export const gradesApi = {
-  // Estudiante: ve sus propias notas
   getMyGrades: () => api.get('/grades/me'),
-  // Docente/Admin: ve notas de una materia
   getCourseGrades: (courseId) => api.get(`/grades/course/${courseId}`),
-  // Docente/Admin: actualiza/ingresa nota
   updateGrade: (gradeId, data) => api.put(`/grades/${gradeId}`, data),
-  // Docente/Admin: crea registro de nota para un estudiante
   createGrade: (payload) => api.post('/grades/', payload),
-  // Obtener nota por inscripción
   getGradeByEnrollment: (enrollmentId) => api.get(`/grades/enrollment/${enrollmentId}`)
 }
 
 export const studentApi = {
   getMyHistory: () => api.get('/students/me/history'),
   getStudentHistory: (studentId) => api.get(`/students/${studentId}/history`)
+}
+
+export const paymentApi = {
+  checkout: (payload) => api.post('/payments/checkout', payload),
+  verify: (wompiTransactionId) => api.post('/payments/verify', { wompi_transaction_id: wompiTransactionId })
 }

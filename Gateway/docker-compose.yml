@@ -112,6 +112,25 @@ services:
     networks:
       - sgau-gateway-net
 
+  payment_db:
+    image: postgres:17-alpine
+    container_name: sgau_payment_db_gateway
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sgau_payments
+    ports:
+      - "5438:5432"
+    volumes:
+      - payment_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sgau_payments"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - sgau-gateway-net
+
   auth_backend:
     build:
       context: "../Auth service/backend"
@@ -227,6 +246,25 @@ services:
     networks:
       - sgau-gateway-net
 
+  payment_backend:
+    build:
+      context: "../Payment Service/backend"
+      dockerfile: Dockerfile
+    container_name: payment_backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@payment_db:5432/sgau_payments
+      FRONTEND_ORIGIN: http://localhost:5173
+      ENROLLMENT_SERVICE_URL: http://enrollment_backend:8000
+      SECRET_KEY: sgau-super-secret-jwt-key-min-32-chars-for-production-use
+      WOMPI_PUBLIC_KEY: pub_test_Q5yDA9xoKdePzhSGeZaVvw1KxtBAlA1A
+    volumes:
+      - "../Payment Service/backend:/app"
+    depends_on:
+      payment_db:
+        condition: service_healthy
+    networks:
+      - sgau-gateway-net
+
   kong:
     image: kong:3.7
     container_name: sgau_kong
@@ -250,6 +288,7 @@ services:
       - enrollment_backend
       - grades_backend
       - student_backend
+      - payment_backend
     networks:
       - sgau-gateway-net
 
@@ -277,6 +316,7 @@ volumes:
   enrollment_db_data:
   grades_db_data:
   student_db_data:
+  payment_db_data:
 
 networks:
   sgau-gateway-net:
