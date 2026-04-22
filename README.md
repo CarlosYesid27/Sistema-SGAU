@@ -27,7 +27,7 @@
 | **Course Service** | 8000 | `/courses` | `sgau_courses` (5434) | Catálogo de materias y prerrequisitos |
 | **Enrollment Service** | 8000 | `/enrollments` | `sgau_enrollment` (5435) | Inscripciones con patrón Saga |
 | **Grades Service** | 8000 | `/grades` | `sgau_grades` (5436) | Registro y cálculo de calificaciones |
-| **Student Service** | 8000 | `/students` | `sgau_students` (5437) | Historial académico (kardex) |
+| **Student Service** | 8000 | `/students` | `sgau_students` (5437) | Historial académico |
 | **Payment Service** | 8000 | `/payments` | `sgau_payments` (5438) | Pagos vía MercadoPago Checkout Pro |
 | **Reporting Service** | 8000 | `/reports` | — (sin BD) | Generación de reportes PDF y CSV |
 | **Kong Gateway** | 8000 | — | — | API Gateway centralizado |
@@ -62,7 +62,6 @@
 - **Saga Orchestrator** — Inscripciones con compensación automática (rollback si falla algún paso)
 - **API Gateway** — Kong como punto de entrada único y enrutador de peticiones
 - **Shared JWT Secret** — Todos los servicios validan el mismo token emitido por Auth Service
-- **M2M (Machine-to-Machine)** — Comunicación interna entre servicios con tokens sintéticos de corta duración
 - **Split Identity/Profile** — Identidad en Auth Service, datos biográficos en User Service
 
 ---
