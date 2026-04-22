@@ -79,21 +79,9 @@ git clone https://github.com/CarlosYesid27/Sistema-SGAU.git
 cd Sistema-SGAU
 ```
 
-### 2. Configurar variables de entorno (opcional)
+### 2. Variables de entorno
 
-El archivo `.env` del Gateway gestiona el token de MercadoPago:
-
-```bash
-cd Gateway
-cp .env.example .env    # Si existe, o crear manualmente
-```
-
-Contenido del `.env` en `Gateway/`:
-```env
-MERCADOPAGO_ACCESS_TOKEN=TU_ACCESS_TOKEN_AQUI
-```
-
-> Si no configuras el token, los pagos quedarán no funcionales pero el resto del sistema operará con normalidad.
+El archivo `Gateway/.env` ya está incluido en el proyecto con todas las variables necesarias (token de MercadoPago, credenciales de bases de datos, etc.). **No necesitas configurar nada adicional.**
 
 ### 3. Levantar todos los servicios
 
