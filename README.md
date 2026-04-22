@@ -1,4 +1,4 @@
-# 🎓 Sistema SGAU V2 — Sistema de Gestión Académica Universitaria
+#  Sistema SGAU — Sistema de Gestión Académica Universitaria
 
 <p align="center">
   <img src="https://img.shields.io/badge/Arquitectura-Microservicios-6c63ff?style=for-the-badge" />
@@ -11,42 +11,14 @@
 
 ---
 
-## 📋 Descripción
+##  Descripción
 
-**SGAU V2** es una plataforma académica universitaria basada en **arquitectura de microservicios**. Permite gestionar usuarios, materias, inscripciones, calificaciones, pagos y generación de reportes, todo desde una interfaz web unificada y un API Gateway centralizado con **Kong**.
-
----
-
-## 🏗️ Arquitectura
-
-```
-                        ┌─────────────────────────────┐
-                        │     Frontend (React + Vite)   │
-                        │        localhost:5173          │
-                        └──────────────┬──────────────┘
-                                       │ HTTP
-                        ┌──────────────▼──────────────┐
-                        │      Kong API Gateway         │
-                        │        localhost:8000          │
-                        └──────────────┬──────────────┘
-           ┌────────────┬──────────────┼──────────────┬────────────┐
-           │            │              │              │            │
-    ┌──────▼───┐ ┌──────▼───┐ ┌───────▼──┐ ┌────────▼─┐ ┌───────▼───┐
-    │   Auth   │ │   User   │ │  Course  │ │Enrollment│ │  Grades  │
-    │ Service  │ │ Service  │ │ Service  │ │ Service  │ │ Service  │
-    └──────────┘ └──────────┘ └──────────┘ └──────────┘ └───────────┘
-
-           ┌────────────┬──────────────┐
-           │            │              │
-    ┌──────▼───┐ ┌──────▼───┐ ┌───────▼──────┐
-    │ Student  │ │ Payment  │ │  Reporting   │
-    │ Service  │ │ Service  │ │   Service    │
-    └──────────┘ └──────────┘ └──────────────┘
-```
+**SGAU V** es una plataforma académica universitaria basada en **arquitectura de microservicios**. Permite gestionar usuarios, materias, inscripciones, calificaciones, pagos y generación de reportes, todo desde una interfaz web unificada y un API Gateway centralizado con **Kong**.
 
 ---
+---
 
-## 🧩 Microservicios
+##  Microservicios
 
 | Servicio | Puerto interno | Prefijo Kong | Base de datos | Descripción |
 |---|---|---|---|---|
@@ -63,7 +35,7 @@
 
 ---
 
-## 🔐 Roles y Funcionalidades
+##  Roles y Funcionalidades
 
 ### 👤 Administrador
 - Gestión completa de usuarios (crear, editar, eliminar)
@@ -85,7 +57,7 @@
 
 ---
 
-## ⚙️ Patrones de Diseño Implementados
+##  Patrones de Diseño Implementados
 
 - **Saga Orchestrator** — Inscripciones con compensación automática (rollback si falla algún paso)
 - **API Gateway** — Kong como punto de entrada único y enrutador de peticiones
@@ -163,23 +135,6 @@ docker compose logs <nombre_del_servicio>
 | 📄 **Docs Auth API** | http://localhost:8001/docs *(acceso directo)* |
 | 📊 **Kong Admin** | http://localhost:8004 |
 
-### 6. Crear el primer usuario administrador
-
-El sistema **no tiene usuario administrador por defecto**. Sigue estos pasos:
-
-1. Abre http://localhost:5173 y regístrate con cualquier correo y contraseña.
-2. El primer usuario se crea con rol `estudiante`. Para convertirlo en `admin`, conéctate directamente a la base de datos de Auth:
-
-```bash
-docker exec -it sgau_auth_db_gateway psql -U postgres -d sgau_auth
-```
-
-```sql
-UPDATE users SET role = 'admin' WHERE email = 'tu_correo@ejemplo.com';
-\q
-```
-
-3. Cierra sesión y vuelve a iniciar — ahora tendrás acceso de administrador.
 
 ### 7. Detener los servicios
 
@@ -251,4 +206,4 @@ Este proyecto fue desarrollado con fines académicos.
 
 ---
 
-<p align="center">Desarrollado por <strong>Carlos Yesid</strong> · SGAU V2 · 2025-2026</p>
+<p align="center">Desarrollado por <strong>Carlos Yesid Atencia - Juan Andres Serna - Nohemi Martinez - Juan Salgado</strong> · SGAU2 · 2025-2026</p>
