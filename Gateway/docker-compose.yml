@@ -256,12 +256,34 @@ services:
       FRONTEND_ORIGIN: http://localhost:5173
       ENROLLMENT_SERVICE_URL: http://enrollment_backend:8000
       SECRET_KEY: sgau-super-secret-jwt-key-min-32-chars-for-production-use
-      WOMPI_PUBLIC_KEY: pub_test_Q5yDA9xoKdePzhSGeZaVvw1KxtBAlA1A
+      MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN:-AQUI_VA_TU_TOKEN}
     volumes:
       - "../Payment Service/backend:/app"
     depends_on:
       payment_db:
         condition: service_healthy
+    networks:
+      - sgau-gateway-net
+
+  reporting_backend:
+    build:
+      context: "../Reporting Service/backend"
+      dockerfile: Dockerfile
+    container_name: reporting_backend
+    environment:
+      FRONTEND_ORIGIN: http://localhost:5173
+      SECRET_KEY: sgau-super-secret-jwt-key-min-32-chars-for-production-use
+      AUTH_SERVICE_URL: http://auth_backend:8001
+      COURSE_SERVICE_URL: http://course_backend:8000
+      ENROLLMENT_SERVICE_URL: http://enrollment_backend:8000
+      GRADES_SERVICE_URL: http://grades_backend:8000
+    volumes:
+      - "../Reporting Service/backend:/app"
+    depends_on:
+      - auth_backend
+      - course_backend
+      - enrollment_backend
+      - grades_backend
     networks:
       - sgau-gateway-net
 
@@ -289,6 +311,7 @@ services:
       - grades_backend
       - student_backend
       - payment_backend
+      - reporting_backend
     networks:
       - sgau-gateway-net
 

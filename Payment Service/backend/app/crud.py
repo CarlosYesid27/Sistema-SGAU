@@ -4,15 +4,12 @@ from app import models
 def get_transaction(db: Session, transaction_id: int):
     return db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
 
-def get_transaction_by_reference(db: Session, reference: str):
-    # En este contexto simple, la referencia puede ser string(id)
-    return get_transaction(db, int(reference))
-
-def create_pending_transaction(db: Session, student_id: int, payment_commitment_id: int, amount: float):
+def create_pending_transaction(db: Session, student_id: int, payment_commitment_id: int, amount: float, course_name: str = None):
     db_txn = models.Transaction(
         student_id=student_id,
         payment_commitment_id=payment_commitment_id,
         amount=amount,
+        course_name=course_name,
         status="PENDING"
     )
     db.add(db_txn)

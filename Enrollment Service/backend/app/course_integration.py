@@ -1,6 +1,7 @@
 import os
 import httpx
 import jwt
+import asyncio
 from datetime import datetime, timedelta
 from fastapi import HTTPException
 
@@ -37,3 +38,17 @@ async def get_course_details(course_id: int):
             return response.json()
     except httpx.RequestError as exc:
         raise HTTPException(status_code=503, detail=f"No se pudo conectar a Course Service: {exc}")
+
+async def get_multiple_course_details(course_ids: list[int]):
+    """Obtiene los detalles de múltiples materias simultáneamente."""
+    if not course_ids:
+        return []
+    
+    tasks = [get_course_details(cid) for cid in set(course_ids)]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    valid_courses = []
+    for r in results:
+        if not isinstance(r, Exception):
+            valid_courses.append(r)
+    return valid_courses

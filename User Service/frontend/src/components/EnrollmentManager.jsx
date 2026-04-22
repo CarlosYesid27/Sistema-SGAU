@@ -162,20 +162,14 @@ export default function EnrollmentManager({ user }) {
 
   return (
     <div className="enrollment-manager">
-      {/* Header */}
-      <div className="page-header" style={{ marginBottom: '24px' }}>
-        <div>
-          <h2>SGAU · Proceso de Inscripción</h2>
-          <p className="subtitle">Inscríbete en las materias ofertadas para este semestre.</p>
-        </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <div className="badge">{myEnrollments.filter(e => e.status === 'ENROLLED').length} Materias Inscritas</div>
-          {pendingCount > 0 && (
-            <div className="badge" style={{ background: '#fef3c7', color: '#92400e' }}>
-              {pendingCount} Pago{pendingCount > 1 ? 's' : ''} Pendiente{pendingCount > 1 ? 's' : ''}
-            </div>
-          )}
-        </div>
+      {/* Badges */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', justifyContent: 'flex-end' }}>
+        <div className="badge">{myEnrollments.filter(e => e.status === 'ENROLLED').length} Materias Inscritas</div>
+        {pendingCount > 0 && (
+          <div className="badge" style={{ background: '#fef3c7', color: '#92400e' }}>
+            {pendingCount} Pago{pendingCount > 1 ? 's' : ''} Pendiente{pendingCount > 1 ? 's' : ''}
+          </div>
+        )}
       </div>
 
       {error && <p className="error" style={{ marginBottom: '20px' }}>{error}</p>}
@@ -278,7 +272,7 @@ export default function EnrollmentManager({ user }) {
                   {/* Monto estimado */}
                   <div style={{ display: 'flex', gap: '6px', fontSize: '13px', color: '#475569' }}>
                     <svg width="14" height="14" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span><strong>Costo materia:</strong> {fmt((course.credits || 3) * 125000)}</span>
+                    <span><strong>Costo materia:</strong> {fmt((course.credits || 3) * 500)}</span>
                   </div>
                 </div>
 
@@ -420,7 +414,7 @@ export default function EnrollmentManager({ user }) {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '6px' }}>
                 <span style={{ color: '#64748b' }}>Costo estimado:</span>
-                <strong style={{ color: '#059669' }}>{fmt((confirmModal.credits || 3) * 125000)}</strong>
+                <strong style={{ color: '#059669' }}>{fmt((confirmModal.credits || 3) * 500)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                 <span style={{ color: '#64748b' }}>Cupos disponibles:</span>

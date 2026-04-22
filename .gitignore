@@ -11,6 +11,7 @@ env/
 Thumbs.db
 logs*.txt
 *.log
+*.db
 coverage/
 .nyc_output/
 build/

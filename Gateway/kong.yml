@@ -58,6 +58,14 @@ services:
           - /payments
         strip_path: false
 
+  - name: reporting-service
+    url: http://reporting_backend:8000
+    routes:
+      - name: reporting-routes
+        paths:
+          - /reports
+        strip_path: false
+
 plugins:
   - name: cors
     config:
@@ -68,6 +76,7 @@ plugins:
         - POST
         - PUT
         - DELETE
+        - PATCH
         - OPTIONS
       headers:
         - Accept

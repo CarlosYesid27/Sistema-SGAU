@@ -1,89 +1,130 @@
 import { useEffect, useState } from 'react'
-import { paymentApi, enrollmentApi } from '../services/api'
+import { paymentApi, enrollmentApi, courseApi } from '../services/api'
 
 export default function PaymentWidget() {
   const [payments, setPayments] = useState([])
+  const [courses, setCourses] = useState([])
+  const [myEnrollments, setMyEnrollments] = useState([])
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [info, setInfo] = useState('')
   const [loadingId, setLoadingId] = useState(null)
-  const [verifyingId, setVerifyingId] = useState(null)
   
   useEffect(() => {
     loadPayments()
-    
-    // Inject script required by Wompi SDK
-    const script = document.createElement('script')
-    script.src = 'https://checkout.wompi.co/widget.js'
-    script.async = true
-    document.body.appendChild(script)
-    
-    return () => {
-      document.body.removeChild(script)
-    }
   }, [])
-  
+
   const loadPayments = async () => {
     try {
-      const res = await enrollmentApi.getMyPayments()
-      // Filter out only active payments or leave all as history
-      const sorted = res.data.sort((a,b) => b.id - a.id)
+      const [resPayments, resCourses, resEnrollments] = await Promise.all([
+        enrollmentApi.getMyPayments(),
+        courseApi.getAll().catch(() => ({ data: [] })),
+        enrollmentApi.getMyEnrollments().catch(() => ({ data: [] }))
+      ])
+      const sorted = resPayments.data.sort((a, b) => b.id - a.id)
       setPayments(sorted)
-    } catch {
-      setError('Error al cargar compromisos de pago')
+      setCourses(resCourses.data)
+      setMyEnrollments(resEnrollments.data)
+    } catch (err) {
+      setError('Error al cargar compromisos de pago. Verifica que el servicio esté activo.')
     }
+  }
+
+  const getCourseName = (payment) => {
+    const enrollment = myEnrollments.find(e => e.id === payment.enrollment_id)
+    if (!enrollment) return 'Aporte Académico'
+    const course = courses.find(c => c.id === enrollment.course_id)
+    return course ? course.name : 'Aporte Académico'
   }
 
   const handlePay = async (payment) => {
     setLoadingId(payment.id)
     setError('')
+    setSuccess('')
+    setInfo('')
+
     try {
       const { data } = await paymentApi.checkout({
         payment_commitment_id: payment.id,
-        amount: payment.amount
+        amount: payment.amount,
+        course_name: getCourseName(payment)
       })
       
-      const checkout = new window.WidgetCheckout({
-        currency: data.currency,
-        amountInCents: data.amount_in_cents,
-        reference: data.reference,
-        publicKey: data.public_key,
-        redirectUrl: '' // Not using redirection, using callback
-      })
-      
-      checkout.open((result) => {
-        const tx = result.transaction
-        verifyPayment(tx.id, payment.id)
-      })
-    } catch {
-      setError('Error al inicializar la pasarela de pago. Asegúrate que payment service esté activo.')
-    } finally {
+      if (data.init_point) {
+        // Guardamos en sessionStorage que tenemos un pago en proceso para este compromiso
+        sessionStorage.setItem(`pending_mp_${payment.id}`, "true")
+        window.open(data.init_point, '_blank')
+        
+        // Al darle click de pagar y abrir la ventana nueva, refrescamos el listado
+        setTimeout(() => loadPayments(), 1000)
+        setLoadingId(null)
+      } else {
+        setError('No se pudo generar el enlace de pago de MercadoPago.')
+        setLoadingId(null)
+      }
+    } catch (err) {
+      const detail = err.response?.data?.detail || err.message || 'Error desconocido'
+      setError(`Error al contactar el servicio de pagos: ${detail}`)
       setLoadingId(null)
     }
   }
 
-  const verifyPayment = async (wompiTxId, paymentId) => {
-    setVerifyingId(paymentId)
+  const verifyPayment = async (paymentCommitmentId) => {
+    setLoadingId('verifying_' + paymentCommitmentId)
+    setError('')
+    setSuccess('')
+    setInfo('')
     try {
-      const res = await paymentApi.verify(wompiTxId)
+      const res = await paymentApi.verify(paymentCommitmentId)
       if (res.data.status === 'APPROVED') {
-        alert('Pago procesado correctamente. Tu inscripción ha sido aprobada.')
-        loadPayments()
+        setSuccess('✅ Pago aprobado con MercadoPago. Tu inscripción ha sido confirmada.')
+        sessionStorage.removeItem(`pending_mp_${paymentCommitmentId}`)
       } else {
-        alert(`Transacción ${res.data.status}. Por favor verifica en tu banco o vuelve a intentar.`)
+        setInfo(`⚠️ El pago aún NO ha sido aprobado en MercadoPago. Intenta verificar más tarde.`)
       }
-    } catch {
-      alert('Hubo un error verificando el pago con la pasarela. Si te cobraron, por favor contacta soporte.')
+    } catch (err) {
+      const detail = err.response?.data?.detail || 'Error verificando el pago con nuestro servidor.'
+      setError(`⚠️ ${detail}`)
     } finally {
-      setVerifyingId(null)
-      loadPayments() // Reload anyway
+      setLoadingId(null)
+      loadPayments()
     }
   }
 
   return (
     <div className="payment-manager">
-      {error && <p className="error" style={{ marginBottom: '20px' }}>{error}</p>}
+      {error && (
+        <div style={{ marginBottom: '20px', padding: '14px 16px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '10px', color: '#991b1b', fontSize: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span><strong>Error:</strong> {error}</span>
+          <button style={{background:'transparent', border:'none', cursor:'pointer', color:'#991b1b', fontWeight:'bold', fontSize:'16px'}} onClick={() => setError('')}>✕</button>
+        </div>
+      )}
+      
+      {success && (
+        <div style={{ marginBottom: '20px', padding: '14px 16px', background: '#ecfdf5', border: '1px solid #6ee7b7', borderRadius: '10px', color: '#065f46', fontSize: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{success}</span>
+          <button style={{background:'transparent', border:'none', cursor:'pointer', color:'#065f46', fontWeight:'bold', fontSize:'16px'}} onClick={() => setSuccess('')}>✕</button>
+        </div>
+      )}
+
+      {info && (
+        <div style={{ marginBottom: '20px', padding: '14px 16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', color: '#92400e', fontSize: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{info}</span>
+          <button style={{background:'transparent', border:'none', cursor:'pointer', color:'#92400e', fontWeight:'bold', fontSize:'16px'}} onClick={() => setInfo('')}>✕</button>
+        </div>
+      )}
+
+      <div style={{ marginBottom: '20px', padding: '14px 16px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', color: '#1e40af', fontSize: '14px' }}>
+        <strong>ℹ️ Nota:</strong> Después de realizar el proceso de pago en MercadoPago, regresa a esta página y dale clic en "Validar Pago" para confirmar tu transacción.
+      </div>
+
       <div className="table-card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', padding: '0 8px' }}>
-          <h3 style={{ margin: 0, color: '#334155' }}>Mis Compromisos Financieros (Wompi)</h3>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', padding: '0 8px' }}>
+          <h3 style={{ margin: 0, color: '#334155' }}>Mis Compromisos Financieros (MercadoPago)</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#059669' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#059669', display: 'inline-block' }}></span>
+            Checkout Pro Activo
+          </div>
         </div>
         
         <div className="table-container" style={{ overflowX: 'auto' }}>
@@ -102,39 +143,70 @@ export default function PaymentWidget() {
               {payments.length === 0 ? (
                 <tr><td colSpan="6" className="empty">No tienes pagos pendientes.</td></tr>
               ) : (
-                payments.map(p => (
-                  <tr key={p.id}>
-                    <td>#{p.id}</td>
-                    <td>Aportes o Matrícula Ext.</td>
-                    <td style={{ fontWeight: 'bold' }}>$ {p.amount.toLocaleString()}</td>
-                    <td>{new Date(p.due_date).toLocaleDateString()}</td>
-                    <td>
-                      {p.status === 'PAID' ? (
-                        <span style={{ color: '#059669', background: '#ecfdf5', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>Pagado</span>
-                      ) : p.status === 'CANCELLED' ? (
-                        <span style={{ color: '#ef4444', background: '#fef2f2', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>Cancelado</span>
-                      ) : (
-                        <span style={{ color: '#b45309', background: '#fffbeb', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>Pendiente</span>
-                      )}
-                    </td>
-                    <td>
-                      <div className="actions" style={{ justifyContent: 'flex-end' }}>
-                        {p.status === 'PENDING_PAYMENT' ? (
-                          <button 
-                            type="button" 
-                            style={{ background: '#2563eb', color: 'white', padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
-                            onClick={() => handlePay(p)}
-                            disabled={loadingId === p.id || verifyingId === p.id}
-                          >
-                            {loadingId === p.id ? 'Cargando Wompi...' : verifyingId === p.id ? 'Verificando...' : 'Pagar con Wompi'}
-                          </button>
+                payments.map(p => {
+                  const isPendingInSession = sessionStorage.getItem(`pending_mp_${p.id}`) === "true"
+                  return (
+                    <tr key={p.id}>
+                      <td>#{p.id}</td>
+                      <td>{getCourseName(p)}</td>
+                      <td style={{ fontWeight: 'bold' }}>$ {p.amount.toLocaleString('es-CO')}</td>
+                      <td>{new Date(p.due_date).toLocaleDateString('es-CO')}</td>
+                      <td>
+                        {p.status === 'PAID' ? (
+                          <span style={{ color: '#059669', background: '#ecfdf5', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold', border: '1px solid #10b981' }}>✓ Pagado</span>
+                        ) : p.status === 'CANCELLED' ? (
+                          <span style={{ color: '#ef4444', background: '#fef2f2', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold', border: '1px solid #fca5a5' }}>Cancelado</span>
                         ) : (
-                          <span style={{ color: '#94a3b8', fontSize: '12px' }}>Sin acción requerida</span>
+                          <span style={{ color: '#b45309', background: '#fffbeb', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold', border: '1px solid #fcd34d' }}>Pendiente</span>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td>
+                        <div className="actions" style={{ justifyContent: 'flex-end', gap: '8px' }}>
+                          {p.status === 'PENDING_PAYMENT' ? (
+                            <>
+                              <button
+                                type="button"
+                                style={{
+                                  background: loadingId === p.id ? '#94a3b8' : '#009ee3', // Color azul MercadoPago
+                                  color: 'white',
+                                  padding: '8px 16px',
+                                  borderRadius: '8px',
+                                  border: 'none',
+                                  cursor: loadingId === p.id ? 'not-allowed' : 'pointer',
+                                  fontWeight: '600',
+                                  fontSize: '13px'
+                                }}
+                                onClick={() => handlePay(p)}
+                                disabled={loadingId === p.id || loadingId === `verifying_${p.id}`}
+                              >
+                                {loadingId === p.id ? '⏳ Iniciando...' : '💳 Pagar'}
+                              </button>
+                              <button
+                                type="button"
+                                style={{
+                                  background: loadingId === `verifying_${p.id}` ? '#94a3b8' : '#fbbf24',
+                                  color: '#78350f',
+                                  padding: '8px 16px',
+                                  borderRadius: '8px',
+                                  border: 'none',
+                                  cursor: loadingId === `verifying_${p.id}` ? 'not-allowed' : 'pointer',
+                                  fontWeight: '600',
+                                  fontSize: '13px'
+                                }}
+                                onClick={() => verifyPayment(p.id)}
+                                disabled={loadingId === `verifying_${p.id}`}
+                              >
+                                {loadingId === `verifying_${p.id}` ? '⏳ Validando...' : '↻ Validar Pago'}
+                              </button>
+                            </>
+                          ) : (
+                            <span style={{ color: '#94a3b8', fontSize: '12px' }}>Sin acción requerida</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>

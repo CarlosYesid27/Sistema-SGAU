@@ -5,7 +5,7 @@ from typing import List
 from app import crud, schemas
 from app.database import get_db
 from app.security import get_current_user, TokenPayload
-from app.course_integration import get_course_details
+from app.course_integration import get_course_details, get_multiple_course_details
 from app.saga import EnrollmentSagaOrchestrator
 
 router = APIRouter(
@@ -86,6 +86,22 @@ async def enroll_in_course(
                 detail=f"Inscripción bloqueada. No cumples el prerrequisito: '{req_name}' (Debe estar PASSED)."
             )
 
+    # 1d. Validar cruce de horarios
+    new_schedule = course_data.get("schedule")
+    if new_schedule and new_schedule.strip() and new_schedule.strip().lower() != "por definir":
+        active_enrollments = [e for e in crud.get_enrollments_by_student(db, student_id) if e.status in ["PENDING", "ENROLLED"]]
+        enrolled_course_ids = [e.course_id for e in active_enrollments]
+        
+        if enrolled_course_ids:
+            enrolled_courses_data = await get_multiple_course_details(enrolled_course_ids)
+            for e_course in enrolled_courses_data:
+                e_schedule = e_course.get("schedule")
+                if e_schedule and e_schedule.strip() == new_schedule.strip():
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"No puedes inscribirte en esta materia porque su horario se cruza con otra materia inscrita ('{e_course.get('name')}')."
+                    )
+
     # ── Pasos 2-4: Ejecutar el Saga ───────────────────────────────────────────
     saga = EnrollmentSagaOrchestrator()
     enrollment = await saga.execute(db, student_id, course_id, course_data)
@@ -112,6 +128,19 @@ async def my_payments(
     """Ver todos mis compromisos de pago pendientes."""
     student_id = int(current_user.sub)
     return crud.get_payments_by_student(db, student_id)
+
+@router.patch("/me/{enrollment_id}/cancel", response_model=schemas.EnrollmentResponse)
+async def cancel_my_enrollment(
+    enrollment_id: int,
+    current_user: TokenPayload = Depends(verify_student),
+    db: Session = Depends(get_db)
+):
+    """Permite al estudiante cancelar voluntariamente una inscripción activa."""
+    student_id = int(current_user.sub)
+    updated = crud.cancel_student_course(db, enrollment_id, student_id)
+    if not updated:
+        raise HTTPException(status_code=400, detail="No se pudo cancelar la materia. Verifica que estés inscrito.")
+    return updated
 
 
 # ─── Endpoints Staff/Admin ────────────────────────────────────────────────────

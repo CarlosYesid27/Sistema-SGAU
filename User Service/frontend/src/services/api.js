@@ -56,7 +56,8 @@ export const enrollmentApi = {
   getMyPayments: () => api.get('/enrollments/me/payments'),
   getSlots: () => api.get('/enrollments/slots'),
   getCourseEnrollments: (courseId) => api.get(`/enrollments/course/${courseId}`),
-  updateStatus: (enrollmentId, status) => api.put(`/enrollments/${enrollmentId}/status`, { status })
+  updateStatus: (enrollmentId, status) => api.put(`/enrollments/${enrollmentId}/status`, { status }),
+  cancel: (enrollmentId) => api.patch(`/enrollments/me/${enrollmentId}/cancel`)
 }
 
 export const gradesApi = {
@@ -74,5 +75,23 @@ export const studentApi = {
 
 export const paymentApi = {
   checkout: (payload) => api.post('/payments/checkout', payload),
-  verify: (wompiTransactionId) => api.post('/payments/verify', { wompi_transaction_id: wompiTransactionId })
+  verify: (paymentCommitmentId) => api.post(`/payments/verify/${paymentCommitmentId}`)
+}
+
+export const reportApi = {
+  // Admin
+  academicPdf:  () => api.get('/reports/academic/pdf',    { responseType: 'blob' }),
+  academicCsv:  () => api.get('/reports/academic/csv',    { responseType: 'blob' }),
+  financialPdf: () => api.get('/reports/financial/pdf',   { responseType: 'blob' }),
+  financialCsv: () => api.get('/reports/financial/csv',   { responseType: 'blob' }),
+  coursePdf:    (id) => api.get(`/reports/course/${id}/pdf`, { responseType: 'blob' }),
+  courseCsv:    (id) => api.get(`/reports/course/${id}/csv`, { responseType: 'blob' }),
+  // Estudiante
+  myAcademicPdf: () => api.get('/reports/me/academic/pdf', { responseType: 'blob' }),
+  myAcademicCsv: () => api.get('/reports/me/academic/csv', { responseType: 'blob' }),
+  myFinancialPdf: () => api.get('/reports/me/financial/pdf', { responseType: 'blob' }),
+  myFinancialCsv: () => api.get('/reports/me/financial/csv', { responseType: 'blob' }),
+  // Docente
+  myCoursesPdf: () => api.get('/reports/me/courses/pdf', { responseType: 'blob' }),
+  myCoursesCsv: () => api.get('/reports/me/courses/csv', { responseType: 'blob' }),
 }

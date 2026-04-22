@@ -2,7 +2,10 @@ import os
 import httpx
 import time
 import jwt
+import logging
 from fastapi import HTTPException, status
+
+logger = logging.getLogger(__name__)
 
 USER_SERVICE_URL = os.getenv("USER_SERVICE_URL", "http://user_backend:8000")
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
@@ -50,7 +53,7 @@ async def verify_teacher(teacher_id: int):
             return user_data
             
         except httpx.RequestError as exc:
-            print(f"[ERROR] Error al solicitar información al User Service: {exc}")
+            logger.error("Error al solicitar información al User Service: %s", exc)
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="El User Service no se encuentra disponible."

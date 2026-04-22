@@ -1,6 +1,5 @@
 import os
 import jwt
-from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer
 from pydantic import BaseModel
@@ -23,13 +22,13 @@ def verify_token(token: str) -> TokenPayload:
         email: str = payload.get("email")
         role: str = payload.get("role")
         exp: int = payload.get("exp")
-        
+
         if user_id_raw is None or email is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-            
+
         user_id = int(user_id_raw)
         return TokenPayload(sub=user_id, email=email, role=role, exp=exp)
-        
+
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired")
     except jwt.InvalidTokenError:
@@ -38,12 +37,3 @@ def verify_token(token: str) -> TokenPayload:
 async def get_current_user(credentials = Depends(security)):
     token = credentials.credentials
     return verify_token(token)
-
-async def check_admin(current_user: TokenPayload = Depends(get_current_user)):
-    """Verifica si el usuario actual tiene rol de administrador"""
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tienes permisos de administrador para realizar esta acción"
-        )
-    return current_user

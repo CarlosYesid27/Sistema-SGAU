@@ -1,6 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
-from app.enums import UserRole, DocumentType
 
 
 class UserRegister(BaseModel):
@@ -37,14 +36,6 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
-
-class UserProfileResponse(BaseModel):
-    first_name: str
-    last_name: str
-    email: str
-    phone: Optional[str]
-    document_type: str
-    document_number: str
 
 
 class UserProfileCombined(UserResponse):

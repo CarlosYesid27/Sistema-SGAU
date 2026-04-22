@@ -50,6 +50,29 @@ def cancel_enrollment(db: Session, enrollment_id: int):
         db.delete(db_enrollment)
         db.commit()
 
+def cancel_student_course(db: Session, enrollment_id: int, student_id: int):
+    """Cancela una inscripción por decisión del estudiante."""
+    enrollment = db.query(Enrollment).filter(
+        Enrollment.id == enrollment_id,
+        Enrollment.student_id == student_id,
+        Enrollment.status.in_(["PENDING", "ENROLLED"])
+    ).first()
+    
+    if enrollment:
+        enrollment.status = "CANCELLED"
+        # Cancelar también el compromiso de pago si sigue pendiente
+        payment = db.query(PaymentCommitment).filter(
+            PaymentCommitment.enrollment_id == enrollment_id,
+            PaymentCommitment.status == "PENDING_PAYMENT"
+        ).first()
+        if payment:
+            payment.status = "CANCELLED"
+            
+        db.commit()
+        db.refresh(enrollment)
+        return enrollment
+    return None
+
 def update_enrollment_status(db: Session, enrollment_id: int, status: str):
     db_enrollment = db.query(Enrollment).filter(Enrollment.id == enrollment_id).first()
     if db_enrollment:
@@ -68,7 +91,7 @@ def has_passed_course(db: Session, student_id: int, course_id: int) -> bool:
 
 # ─── PaymentCommitment CRUD ───────────────────────────────────────────────────
 
-PAYMENT_AMOUNT_PER_CREDIT = 125_000  # $125,000 COP por crédito
+PAYMENT_AMOUNT_PER_CREDIT = 500  # $500 COP por crédito para pruebas reales practicables
 
 def create_payment_commitment(db: Session, enrollment_id: int, credits: int) -> PaymentCommitment:
     """Genera el compromiso de pago (Paso 3 del Saga)"""

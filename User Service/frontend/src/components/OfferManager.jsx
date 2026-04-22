@@ -116,7 +116,7 @@ export default function OfferManager() {
                       ) : (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: '#f8fafc', color: '#64748b', borderRadius: '20px', fontSize: '12px', fontWeight: '500', border: '1px solid #cbd5e1' }}>
                           <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#94a3b8', display: 'inline-block' }}></span>
-                          Oculta (No Ofertada)
+                          No ofertada
                         </span>
                       )}
                     </td>

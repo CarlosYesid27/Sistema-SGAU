@@ -2,19 +2,23 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 import httpx
 import os
+import logging
 
 from app import crud, schemas, models
 from app.database import get_db
 from app.security import get_current_user, TokenPayload
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/payments",
     tags=["Payments"],
 )
 
-# Llave publica oficial de Wompi Colombia (Sandbox)
-WOMPI_PUB_KEY = os.getenv("WOMPI_PUBLIC_KEY", "pub_test_Q5yDA9xoKdePzhSGeZaVvw1KxtBAlA1A")
+# Llave privada oficial de Producción de MercadoPago
+MERCADOPAGO_ACCESS_TOKEN = os.getenv("MERCADOPAGO_ACCESS_TOKEN", "TU_TOKEN_MERCADOPAGO")
 ENROLLMENT_SERVICE_URL = os.getenv("ENROLLMENT_SERVICE_URL", "http://enrollment_backend:8000")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 async def verify_student(current_user: TokenPayload = Depends(get_current_user)):
     if current_user.role != "estudiante":
@@ -34,78 +38,137 @@ async def checkout(
         db=db, 
         student_id=student_id, 
         payment_commitment_id=request.payment_commitment_id,
-        amount=request.amount
+        amount=request.amount,
+        course_name=request.course_name
     )
+    
+    # Contactar MercadoPago para generar Preferencia (Checkout Pro)
+    async with httpx.AsyncClient() as client:
+        headers = {
+            "Authorization": f"Bearer {MERCADOPAGO_ACCESS_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        mp_title = f"Pago de materia: {request.course_name}" if request.course_name else "Pago de matrícula/aportes universitarios SGAU"
+        payload = {
+            "items": [
+                {
+                    "title": mp_title,
+                    "quantity": 1,
+                    "unit_price": float(request.amount),
+                    "currency_id": "COP"
+                }
+            ],
+            "external_reference": str(txn.id)
+        }
+        
+        mp_res = await client.post(
+            "https://api.mercadopago.com/checkout/preferences",
+            json=payload,
+            headers=headers
+        )
+        
+        if mp_res.status_code not in [200, 201]:
+            logger.error("MercadoPago error: %s", mp_res.text)
+            raise HTTPException(status_code=500, detail=f"Error MercadoPago: {mp_res.text}")
+            
+        init_point = mp_res.json().get("init_point")
     
     return schemas.CheckoutResponse(
         transaction_id=txn.id,
-        public_key=WOMPI_PUB_KEY,
-        amount_in_cents=int(txn.amount * 100),
-        reference=str(txn.id) # Usamos el ID interno como referencia base
+        init_point=init_point
     )
 
-@router.post("/verify", response_model=schemas.TransactionResponse)
+@router.post("/verify/{payment_commitment_id}", response_model=schemas.TransactionResponse)
 async def verify_payment(
-    req: schemas.VerifyRequest,
+    payment_commitment_id: int,
     current_user: TokenPayload = Depends(verify_student),
     db: Session = Depends(get_db)
 ):
     """
-    Toma el ID de transacción generado por el Widget de Wompi, 
-    consulta el API publica de Wompi para saber si fue aprobado, 
-    y actualiza nuestro DB local y el Enrollment Service.
+    Busca la transacción pendiente local, y consulta en MercadoPago por `external_reference`
+    para ver si el estado cambió a aprobado.
     """
-    wompi_tx_id = req.wompi_transaction_id
+    student_id = int(current_user.sub)
     
+    # Buscamos TODAS las transacciones locales para ese compromiso.
+    transactions = db.query(models.Transaction).filter(
+        models.Transaction.payment_commitment_id == payment_commitment_id,
+        models.Transaction.student_id == student_id,
+        models.Transaction.status.in_(["PENDING", "APPROVED"])
+    ).order_by(models.Transaction.id.desc()).all()
+    
+    if not transactions:
+        raise HTTPException(status_code=404, detail="No hay una transacción registrada para verificar. Intenta pagar primero.")
+    
+    mp_status = None
+    payment_id = None
+    applied_txn = None
+
     async with httpx.AsyncClient() as client:
-        try:
-            wompi_res = await client.get(f"https://sandbox.wompi.co/v1/transactions/{wompi_tx_id}")
-            if wompi_res.status_code != 200:
-                raise HTTPException(status_code=400, detail="Transacción de Wompi no encontrada o inválida.")
-                
-            data = wompi_res.json()["data"]
-            wompi_status = data["status"] # APPROVED, DECLINED, VOIDED, ERROR
-            reference = data["reference"]
-        except httpx.RequestError:
-            raise HTTPException(status_code=500, detail="Error conectando con pasarela Wompi.")
+        headers = {"Authorization": f"Bearer {MERCADOPAGO_ACCESS_TOKEN}"}
+        
+        # Recorremos nuestras transacciones locales de la más nueva a la más vieja
+        # buscando cuál fue la que efectivamente se pagó en MercadoPago
+        for txn in transactions:
+            try:
+                mp_res = await client.get(
+                    f"https://api.mercadopago.com/v1/payments/search?external_reference={txn.id}",
+                    headers=headers
+                )
+                if mp_res.status_code == 200:
+                    results = mp_res.json().get("results", [])
+                    if len(results) > 0:
+                        latest_payment = sorted(results, key=lambda x: x["date_created"], reverse=True)[0]
+                        mp_status = latest_payment.get("status")
+                        payment_id = str(latest_payment.get("id"))
+                        applied_txn = txn
+                        if mp_status == "approved":
+                            break # Encontramos la ganadora
+            except Exception:
+                continue
+
+    # Si no encontramos nada en MP pero en nuestra DB ya hay una APPROVED, la usamos
+    if not applied_txn:
+        applied_txn = next((t for t in transactions if t.status == "APPROVED"), None)
+        if applied_txn:
+            mp_status = "approved"
+            payment_id = applied_txn.wompi_transaction_id
+        else:
+            raise HTTPException(status_code=400, detail="Aún no hay ningún pago registrado en MercadoPago para esta referencia.")
+    
+    txn = applied_txn
             
-    txn = crud.get_transaction_by_reference(db, reference)
-    if not txn:
-        raise HTTPException(status_code=404, detail="Transacción local no encontrada para esta referencia.")
+    if mp_status == "approved":
+        # Solo actualizamos si estaba PENDING
+        if txn.status == "PENDING":
+            crud.update_transaction_status(db, txn.id, "APPROVED", payment_id)
         
-    if txn.student_id != int(current_user.sub):
-        raise HTTPException(status_code=403, detail="No tienes permisos sobre esta transacción.")
-        
-    if wompi_status == "APPROVED":
-        crud.update_transaction_status(db, txn.id, "APPROVED", wompi_tx_id)
-        
-        # Notificar al Enrollment Service! (M2M authentication skipped assuming internal net trust, 
-        # or we should pass the token, but let's pass a system flag or just pass JWT over since we are trusted)
-        # We will reuse the user's token directly in production, but let's just make the request.
-        # However, to avoid complexity of passing token across boundaries for system-action, 
-        # the Enrollment Service might need an internal patch endpoint or we just forward the Bearer.
-        # We don't have the raw token here nicely without request.headers. 
-        # But wait, we can just fetch it using FastAPI Depends(OAuth2PasswordBearer), but we skipped that.
-        # Let's just create an internal M2M call without auth or just assume Enrollment service doesn't check auth for M2M if done locally.
-        # Actually Enrollment Service patch_status checks `get_current_user`! 
-        # Wait, how does Course Service call User Service? It uses internal JWT.
-        # Let's generate a service-level token to authenticate.
+        # Notificar al Enrollment Service (Reintento seguro con token compatible)
         from app.security import create_access_token
-        m2m_token = create_access_token(data={"sub": "system", "role": "admin"})
+        # Enrollment Service requiere 'sub' (int) y 'email' (str)
+        m2m_token = create_access_token(data={
+            "sub": 0, 
+            "email": "system@sgau.local", 
+            "role": "admin"
+        })
         
-        async with httpx.AsyncClient() as client:
-            headers = {"Authorization": f"Bearer {m2m_token}"}
-            payload = {"status": "PAID"}
-            enr_res = await client.patch(
-                f"{ENROLLMENT_SERVICE_URL}/enrollments/payments/{txn.payment_commitment_id}/status",
-                json=payload,
-                headers=headers
-            )
-            if enr_res.status_code not in [200, 204]:
-                # Log critical error. Para MVP local no rompemos si ya se pagó.
-                pass
-                
-    elif wompi_status in ["DECLINED", "ERROR", "VOIDED"]:
-        crud.update_transaction_status(db, txn.id, wompi_status, wompi_tx_id)
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            headers_m2m = {"Authorization": f"Bearer {m2m_token}"}
+            payload_m2m = {"status": "PAID"}
+            try:
+                enr_res = await client.patch(
+                    f"{ENROLLMENT_SERVICE_URL}/enrollments/payments/{txn.payment_commitment_id}/status",
+                    json=payload_m2m,
+                    headers=headers_m2m
+                )
+                if enr_res.status_code not in [200, 204]:
+                    logger.warning("Enrollment update failed: %s %s", enr_res.status_code, enr_res.text)
+                else:
+                    logger.info("Enrollment updated for commitment %s", txn.payment_commitment_id)
+            except Exception as e:
+                logger.error("Enrollment connection error: %s", str(e))
+            
+    elif mp_status in ["rejected", "cancelled", "refunded"]:
+        crud.update_transaction_status(db, txn.id, "DECLINED", payment_id)
         
     return crud.get_transaction(db, txn.id)

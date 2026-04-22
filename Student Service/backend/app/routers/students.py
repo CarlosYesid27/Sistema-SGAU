@@ -1,9 +1,27 @@
+import os
+import logging
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app import crud, schemas, models
 from app.database import get_db
 from app.security import get_current_user, TokenPayload, require_roles
+
+logger = logging.getLogger(__name__)
+COURSE_SERVICE_URL = os.getenv("COURSE_SERVICE_URL", "http://course_backend:8000")
+
+def _get_system_token() -> str:
+    import jwt
+    from datetime import datetime, timedelta
+    SECRET_KEY = os.getenv("SECRET_KEY", "sgau-super-secret-jwt-key-min-32-chars-for-production-use")
+    payload = {
+        "sub": 0,
+        "email": "system@sgau.internal",
+        "role": "admin",
+        "exp": datetime.utcnow() + timedelta(minutes=5),
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
 router = APIRouter(
     prefix="/students",
@@ -18,7 +36,7 @@ async def get_my_history(
     """Estudiantes pueden ver su propia historia"""
     if _current_user.role != 'estudiante':
         raise HTTPException(status_code=403, detail="Solo estudiantes pueden acceder a esto")
-        
+
     # Usamos _current_user.sub que mapea al user id
     student_id = int(_current_user.sub)
     return crud.get_record(db, student_id=student_id)
@@ -32,25 +50,8 @@ async def get_student_history(
     """Profesores o Admin pueden ver historial de estudiantes específicos"""
     if _current_user.role == 'estudiante' and int(_current_user.sub) != student_id:
          raise HTTPException(status_code=403, detail="No puedes ver notas de otros")
-         
+
     return crud.get_record(db, student_id=student_id)
-
-import os
-import httpx
-
-COURSE_SERVICE_URL = os.getenv("COURSE_SERVICE_URL", "http://course_backend:8000")
-
-def _get_system_token() -> str:
-    import jwt
-    from datetime import datetime, timedelta
-    SECRET_KEY = os.getenv("SECRET_KEY", "sgau-super-secret-jwt-key-min-32-chars-for-production-use")
-    payload = {
-        "sub": 0,
-        "email": "system@sgau.internal",
-        "role": "admin",
-        "exp": datetime.utcnow() + timedelta(minutes=5),
-    }
-    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
 @router.post("/history", response_model=schemas.AcademicRecordResponse, status_code=status.HTTP_201_CREATED)
 async def add_history_entry(
