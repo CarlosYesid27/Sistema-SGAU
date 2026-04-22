@@ -17,6 +17,35 @@
 
 ---
 
+## 🏗️ Arquitectura
+
+```
+                        ┌─────────────────────────────┐
+                        │     Frontend (React + Vite)   │
+                        │        localhost:5173          │
+                        └──────────────┬──────────────┘
+                                       │ HTTP
+                        ┌──────────────▼──────────────┐
+                        │      Kong API Gateway         │
+                        │        localhost:8000          │
+                        └──────────────┬──────────────┘
+           ┌────────────┬──────────────┼──────────────┬────────────┐
+           │            │              │              │            │
+    ┌──────▼───┐ ┌──────▼───┐ ┌───────▼──┐ ┌────────▼─┐ ┌───────▼───┐
+    │   Auth   │ │   User   │ │  Course  │ │Enrollment│ │  Grades  │
+    │ Service  │ │ Service  │ │ Service  │ │ Service  │ │ Service  │
+    └──────────┘ └──────────┘ └──────────┘ └──────────┘ └───────────┘
+
+           ┌────────────┬──────────────┐
+           │            │              │
+    ┌──────▼───┐ ┌──────▼───┐ ┌───────▼──────┐
+    │ Student  │ │ Payment  │ │  Reporting   │
+    │ Service  │ │ Service  │ │   Service    │
+    └──────────┘ └──────────┘ └──────────────┘
+```
+
+---
+
 ## 🧩 Microservicios
 
 | Servicio | Puerto interno | Prefijo Kong | Base de datos | Descripción |
@@ -66,11 +95,13 @@
 
 ---
 
-## 🚀 Despliegue con Docker Compose
+## 🚀 Despliegue Local paso a paso
 
 ### Requisitos previos
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado y corriendo
-- Git
+
+Antes de empezar asegúrate de tener instalado:
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — corriendo en segundo plano
+- [Git](https://git-scm.com/)
 
 ### 1. Clonar el repositorio
 
@@ -79,18 +110,37 @@ git clone https://github.com/CarlosYesid27/Sistema-SGAU.git
 cd Sistema-SGAU
 ```
 
-### 2. Variables de entorno
+### 2. Crear el archivo de variables de entorno
 
-El archivo `Gateway/.env` ya está incluido en el proyecto con todas las variables necesarias (token de MercadoPago, credenciales de bases de datos, etc.). **No necesitas configurar nada adicional.**
+El archivo `Gateway/.env` **no se incluye en el repositorio** por seguridad. Debes crearlo manualmente a partir del ejemplo:
+
+```bash
+cd Gateway
+copy .env.example .env
+```
+
+Luego edita el archivo `Gateway/.env` y reemplaza el token de MercadoPago con el tuyo:
+
+```env
+MERCADOPAGO_ACCESS_TOKEN=APP_USR-TU_TOKEN_REAL_AQUI
+```
+
+> **¿Dónde obtengo el token?** → [MercadoPago Developers](https://www.mercadopago.com.co/developers/panel/credentials)
+>
+> Si no tienes token, igualmente puedes usar el sistema — solo el módulo de pagos quedará inactivo.
 
 ### 3. Levantar todos los servicios
 
 ```bash
-cd Gateway
 docker compose up -d --build
 ```
 
-El primer arranque toma ~3-5 minutos mientras construye las imágenes y levanta los contenedores.
+El **primer arranque** tarda entre 3 y 6 minutos mientras Docker construye las 9 imágenes y levanta los contenedores.
+
+Los arranques posteriores (sin `--build`) son mucho más rápidos:
+```bash
+docker compose up -d
+```
 
 ### 4. Verificar que todo esté corriendo
 
@@ -98,34 +148,49 @@ El primer arranque toma ~3-5 minutos mientras construye las imágenes y levanta 
 docker compose ps
 ```
 
-Debes ver todos los contenedores en estado `Up` o `healthy`.
+Todos los contenedores deben mostrar estado `Up` o `healthy`. Si alguno aparece como `Exit`, revisa sus logs:
+
+```bash
+docker compose logs <nombre_del_servicio>
+```
 
 ### 5. Acceder a la aplicación
 
 | Recurso | URL |
 |---|---|
 | 🌐 **Aplicación Web** | http://localhost:5173 |
-| 🔀 **API Gateway** | http://localhost:8000 |
-| 📄 **Docs Auth API** | http://localhost:8000/auth/docs |
-| 📄 **Docs Course API** | http://localhost:8000/courses/docs |
+| 🔀 **API Gateway (Kong)** | http://localhost:8000 |
+| 📄 **Docs Auth API** | http://localhost:8001/docs *(acceso directo)* |
 | 📊 **Kong Admin** | http://localhost:8004 |
 
-### 6. Detener los servicios
+### 6. Crear el primer usuario administrador
+
+El sistema **no tiene usuario administrador por defecto**. Sigue estos pasos:
+
+1. Abre http://localhost:5173 y regístrate con cualquier correo y contraseña.
+2. El primer usuario se crea con rol `estudiante`. Para convertirlo en `admin`, conéctate directamente a la base de datos de Auth:
+
+```bash
+docker exec -it sgau_auth_db_gateway psql -U postgres -d sgau_auth
+```
+
+```sql
+UPDATE users SET role = 'admin' WHERE email = 'tu_correo@ejemplo.com';
+\q
+```
+
+3. Cierra sesión y vuelve a iniciar — ahora tendrás acceso de administrador.
+
+### 7. Detener los servicios
 
 ```bash
 docker compose down
 ```
 
-Para eliminar también los volúmenes de bases de datos:
+Para borrar también las bases de datos (todos los datos se perderán):
 ```bash
 docker compose down -v
 ```
-
----
-
-## 👤 Usuario por defecto
-
-Al iniciar el sistema por primera vez, **debes registrar el primer usuario administrador** a través de la pantalla de registro. Luego cambia su rol a `admin` directamente en la base de datos o desde otro administrador.
 
 ---
 
@@ -134,20 +199,20 @@ Al iniciar el sistema por primera vez, **debes registrar el primer usuario admin
 ```
 Sistema-SGAU/
 ├── Gateway/
-│   ├── docker-compose.yml    # Orquestación de todos los servicios
-│   ├── kong.yml              # Configuración declarativa del API Gateway
-│   └── .env                  # Variables de entorno (no versionado)
+│   ├── docker-compose.yml      # Orquestador de todos los servicios
+│   ├── kong.yml                # Configuración declarativa del API Gateway
+│   └── .env.example            # Plantilla de variables de entorno
 │
-├── Auth service/backend/     # FastAPI — Autenticación JWT
+├── Auth service/backend/       # FastAPI — Autenticación JWT
 ├── User Service/
-│   ├── backend/              # FastAPI — Perfiles de usuario
-│   └── frontend/             # React + Vite — SPA principal
-├── Course service/backend/   # FastAPI — Materias y prerrequisitos
+│   ├── backend/                # FastAPI — Perfiles de usuario
+│   └── frontend/               # React + Vite — SPA principal
+├── Course service/backend/     # FastAPI — Materias y prerrequisitos
 ├── Enrollment Service/backend/ # FastAPI — Inscripciones (Saga)
-├── Grades Service/backend/   # FastAPI — Calificaciones
-├── Student Service/backend/  # FastAPI — Historial académico
-├── Payment Service/backend/  # FastAPI — Pagos con MercadoPago
-└── Reporting Service/backend/ # FastAPI — Reportes PDF y CSV
+├── Grades Service/backend/     # FastAPI — Calificaciones
+├── Student Service/backend/    # FastAPI — Historial académico
+├── Payment Service/backend/    # FastAPI — Pagos con MercadoPago
+└── Reporting Service/backend/  # FastAPI — Reportes PDF y CSV
 ```
 
 ---
@@ -160,11 +225,23 @@ Sistema-SGAU/
 | Frontend | React 18, Vite, Axios |
 | Base de datos | PostgreSQL 17 |
 | Gateway | Kong 3.7 (DB-less, declarativo) |
-| ORM / Migraciones | SQLAlchemy (auto-migrate en startup) |
 | Autenticación | JWT (PyJWT), passlib (pbkdf2_sha256) |
 | Pagos | MercadoPago Checkout Pro |
-| Reportes | ReportLab (PDF), csv (Python stdlib) |
+| Reportes | ReportLab (PDF), csv (stdlib Python) |
 | Contenedores | Docker, Docker Compose |
+
+---
+
+## ❓ Problemas comunes
+
+**Un contenedor queda en `Exit` al arrancar**
+→ Espera 30 segundos y ejecuta `docker compose up -d` de nuevo. Algunos servicios dependen de que la base de datos esté `healthy` antes de arrancar.
+
+**El frontend no carga (error de red)**
+→ Verifica que Kong esté corriendo: `docker compose ps sgau_kong`. Si aparece `Exit`, reinícialo con `docker compose restart kong`.
+
+**Error 401 / Token inválido en todas las peticiones**
+→ Asegúrate de que todos los servicios usen la misma `SECRET_KEY`. En el `docker-compose.yml` ya está configurada igual para todos.
 
 ---
 
