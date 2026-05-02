@@ -526,3 +526,130 @@ tbody tr:hover {
   }
 }
 
+
+/* --- SCHEDULE VIEW --- */
+.schedule-container {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  overflow-x: auto;
+}
+
+.schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.schedule-grid-wrapper {
+  min-width: 800px;
+  display: flex;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.schedule-time-column {
+  width: 60px;
+  flex-shrink: 0;
+  background: #f1f5f9;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+}
+
+.schedule-day-column {
+  flex: 1;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.schedule-day-column:last-child {
+  border-right: none;
+}
+
+.schedule-col-header {
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  color: #334155;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.schedule-time-slot {
+  height: 60px; /* Each hour is 60px */
+  border-bottom: 1px dashed #e2e8f0;
+  box-sizing: border-box;
+}
+.schedule-time-slot:last-child {
+  border-bottom: none;
+}
+
+.schedule-time-label {
+  height: 60px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 8px;
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+  border-bottom: 1px solid #e2e8f0;
+  box-sizing: border-box;
+}
+
+.schedule-events-container {
+  position: absolute;
+  top: 50px; /* Below the header */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none; /* Let clicks pass through empty spaces */
+}
+
+.schedule-event {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 12px;
+  overflow: hidden;
+  pointer-events: auto;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border-left: 3px solid rgba(0,0,0,0.2);
+}
+
+.schedule-event:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  z-index: 10;
+}
+
+.schedule-event-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.schedule-event-time {
+  font-size: 10px;
+  opacity: 0.8;
+  font-weight: 500;
+}
+

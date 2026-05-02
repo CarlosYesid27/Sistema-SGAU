@@ -17,7 +17,8 @@ export default function CourseManager() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [credits, setCredits] = useState(3)
-  const [schedule, setSchedule] = useState('')
+  const [scheduleBlocks, setScheduleBlocks] = useState([])
+  const [rawSchedule, setRawSchedule] = useState('') // For unparseable legacy schedules
   const [teacherId, setTeacherId] = useState('')
   const [academicProgram, setAcademicProgram] = useState('')
   const [selectedPrereqs, setSelectedPrereqs] = useState([])
@@ -59,7 +60,9 @@ export default function CourseManager() {
         name,
         description,
         credits: parseInt(credits),
-        schedule,
+        schedule: scheduleBlocks.length > 0 
+          ? scheduleBlocks.map(b => `${b.day} ${b.start}-${b.end}`).join(', ') 
+          : rawSchedule,
         teacher_id: teacherId ? parseInt(teacherId) : null,
         academic_program: academicProgram || null
       }
@@ -102,7 +105,29 @@ export default function CourseManager() {
       setName(detail.name)
       setDescription(detail.description || '')
       setCredits(detail.credits)
-      setSchedule(detail.schedule || '')
+      
+      const schStr = detail.schedule || ''
+      const parsedBlocks = []
+      const parts = schStr.split(',')
+      let allParsed = true
+      for (const p of parts) {
+        if (!p.trim()) continue
+        const match = p.trim().match(/^([A-Za-záéíóú]+)\s+(\d{2}:\d{2})-(\d{2}:\d{2})$/i)
+        if (match) {
+          parsedBlocks.push({ day: match[1], start: match[2], end: match[3] })
+        } else {
+          allParsed = false
+        }
+      }
+      
+      if (allParsed && parsedBlocks.length > 0) {
+        setScheduleBlocks(parsedBlocks)
+        setRawSchedule('')
+      } else {
+        setScheduleBlocks([])
+        setRawSchedule(schStr)
+      }
+
       setTeacherId(detail.teacher_id || '')
       setAcademicProgram(detail.academic_program || '')
       
@@ -122,7 +147,8 @@ export default function CourseManager() {
     setName('')
     setDescription('')
     setCredits(3)
-    setSchedule('')
+    setScheduleBlocks([])
+    setRawSchedule('')
     setTeacherId('')
     setAcademicProgram('')
     setSelectedPrereqs([])
@@ -190,17 +216,78 @@ export default function CourseManager() {
               />
             </div>
 
-            <div className="form-group">
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontSize: '13px', color: '#5f7288', fontWeight: '600' }}>
                 <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 Horario
               </label>
-              <input 
-                placeholder="L - M 08:00 - 10:00" 
-                value={schedule} 
-                onChange={e => setSchedule(e.target.value)} 
-                style={{ width: '100%' }}
-              />
+              
+              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                {rawSchedule && scheduleBlocks.length === 0 && (
+                  <div style={{ marginBottom: '12px', padding: '10px', background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a', borderRadius: '6px', fontSize: '13px' }}>
+                    <strong>Aviso:</strong> El horario actual (<em>{rawSchedule}</em>) tiene un formato antiguo. Por favor, redefínelo usando los controles a continuación para prevenir cruces.
+                  </div>
+                )}
+                
+                {scheduleBlocks.map((block, idx) => (
+                  <div key={idx} style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center' }}>
+                    <select 
+                      value={block.day} 
+                      onChange={e => {
+                        const newBlocks = [...scheduleBlocks]
+                        newBlocks[idx].day = e.target.value
+                        setScheduleBlocks(newBlocks)
+                      }}
+                      style={{ flex: '1', padding: '8px' }}
+                    >
+                      <option value="Lunes">Lunes</option>
+                      <option value="Martes">Martes</option>
+                      <option value="Miércoles">Miércoles</option>
+                      <option value="Jueves">Jueves</option>
+                      <option value="Viernes">Viernes</option>
+                      <option value="Sábado">Sábado</option>
+                    </select>
+                    <input 
+                      type="time" 
+                      value={block.start} 
+                      onChange={e => {
+                        const newBlocks = [...scheduleBlocks]
+                        newBlocks[idx].start = e.target.value
+                        setScheduleBlocks(newBlocks)
+                      }}
+                      style={{ padding: '8px' }}
+                    />
+                    <span style={{ color: '#64748b' }}>hasta</span>
+                    <input 
+                      type="time" 
+                      value={block.end} 
+                      onChange={e => {
+                        const newBlocks = [...scheduleBlocks]
+                        newBlocks[idx].end = e.target.value
+                        setScheduleBlocks(newBlocks)
+                      }}
+                      style={{ padding: '8px' }}
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setScheduleBlocks(scheduleBlocks.filter((_, i) => i !== idx))}
+                      style={{ padding: '8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                      title="Eliminar bloque"
+                    >
+                      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </button>
+                  </div>
+                ))}
+                
+                <button 
+                  type="button" 
+                  onClick={() => setScheduleBlocks([...scheduleBlocks, { day: 'Lunes', start: '08:00', end: '10:00' }])}
+                  style={{ marginTop: '4px', padding: '8px 12px', background: '#eef4ff', color: '#1e67c6', border: '1px dashed #cdd9e8', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  Añadir Bloque de Horario
+                </button>
+              </div>
             </div>
 
             <div className="form-group">

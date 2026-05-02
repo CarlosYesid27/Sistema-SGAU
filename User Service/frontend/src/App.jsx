@@ -14,6 +14,7 @@ import PaymentWidget from './components/PaymentWidget'
 import MyCourses from './components/MyCourses'
 import ReportingManager from './components/ReportingManager'
 import MyReports from './components/MyReports'
+import ScheduleView from './components/ScheduleView'
 import { authApi, authStorage, usersApi, courseApi } from './services/api'
 
 export default function App() {
@@ -279,6 +280,19 @@ export default function App() {
                 </button>
                 <button
                   type="button"
+                  className={teacherTab === 'schedule' ? 'tab-btn active' : 'tab-btn'}
+                  onClick={() => setTeacherTab('schedule')}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                  <span>Mi Horario</span>
+                </button>
+                <button
+                  type="button"
                   className={teacherTab === 'profile' ? 'tab-btn active' : 'tab-btn'}
                   onClick={() => setTeacherTab('profile')}
                 >
@@ -365,6 +379,19 @@ export default function App() {
                 </button>
                 <button 
                   type="button"
+                  className={studentTab === 'schedule' ? 'tab-btn active' : 'tab-btn'} 
+                  onClick={() => setStudentTab('schedule')}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                  <span>Mi Horario</span>
+                </button>
+                <button 
+                  type="button"
                   className={studentTab === 'reports' ? 'tab-btn active' : 'tab-btn'} 
                   onClick={() => setStudentTab('reports')}
                 >
@@ -396,15 +423,15 @@ export default function App() {
               SGAU · {userRole === 'admin'
                 ? (adminTab === 'users' ? 'Gestión de Usuarios' : adminTab === 'courses' ? 'Catálogo de Materias' : adminTab === 'reports' ? 'Motor de Reportes' : 'Oferta Académica')
                 : userRole === 'docente'
-                ? (teacherTab === 'grades' ? 'Calificaciones' : teacherTab === 'reports' ? 'Mis Reportes' : 'Mi Perfil')
-                : (studentTab === 'enrollments' ? 'Proceso de Inscripción' : studentTab === 'grades' ? 'Mis Calificaciones' : studentTab === 'history' ? 'Historial Académico' : studentTab === 'payments' ? 'Centro de Pagos' : studentTab === 'my_courses' ? 'Mis Cursos' : studentTab === 'reports' ? 'Mis Reportes' : 'Mi Perfil Estudiantil')}
+                ? (teacherTab === 'grades' ? 'Calificaciones' : teacherTab === 'schedule' ? 'Mi Horario' : teacherTab === 'reports' ? 'Mis Reportes' : 'Mi Perfil')
+                : (studentTab === 'enrollments' ? 'Proceso de Inscripción' : studentTab === 'schedule' ? 'Mi Horario' : studentTab === 'grades' ? 'Mis Calificaciones' : studentTab === 'history' ? 'Historial Académico' : studentTab === 'payments' ? 'Centro de Pagos' : studentTab === 'my_courses' ? 'Mis Cursos' : studentTab === 'reports' ? 'Mis Reportes' : 'Mi Perfil Estudiantil')}
             </h1>
             <p className="subtitle">
               {userRole === 'admin' 
                 ? (adminTab === 'users' ? 'Usuarios registrados en sistema activo (solo listar, editar y eliminar).' : adminTab === 'courses' ? 'Administra inscripciones, prerrequisitos y docentes académicos.' : adminTab === 'reports' ? 'Exporta informes académicos y financieros en PDF y CSV.' : 'Gestiona la disponibilidad y el momento de oferta de las materias.')
                 : userRole === 'docente'
-                ? (teacherTab === 'grades' ? 'Ingresa y gestiona las calificaciones de tus estudiantes.' : teacherTab === 'reports' ? 'Descarga tus reportes en PDF o CSV.' : 'Información personal y credenciales.')
-                : (studentTab === 'enrollments' ? 'Inscríbete en las materias ofertadas para este semestre.' : studentTab === 'grades' ? 'Consulta tus notas y promedio acumulado.' : studentTab === 'history' ? 'Revisa tu progreso académico y nivel de aprobación histórico.' : studentTab === 'payments' ? 'Paga tus liquidaciones y recargos con MercadoPago.' : studentTab === 'my_courses' ? 'Gestiona tus materias inscritas activas.' : studentTab === 'reports' ? 'Descarga tus reportes académicos en PDF o CSV.' : 'Información personal y credenciales.')}
+                ? (teacherTab === 'grades' ? 'Ingresa y gestiona las calificaciones de tus estudiantes.' : teacherTab === 'schedule' ? 'Revisa visualmente tu calendario semanal.' : teacherTab === 'reports' ? 'Descarga tus reportes en PDF o CSV.' : 'Información personal y credenciales.')
+                : (studentTab === 'enrollments' ? 'Inscríbete en las materias ofertadas para este semestre.' : studentTab === 'schedule' ? 'Revisa visualmente tu calendario semanal de materias inscritas.' : studentTab === 'grades' ? 'Consulta tus notas y promedio acumulado.' : studentTab === 'history' ? 'Revisa tu progreso académico y nivel de aprobación histórico.' : studentTab === 'payments' ? 'Paga tus liquidaciones y recargos con MercadoPago.' : studentTab === 'my_courses' ? 'Gestiona tus materias inscritas activas.' : studentTab === 'reports' ? 'Descarga tus reportes académicos en PDF o CSV.' : 'Información personal y credenciales.')}
             </p>
           </div>
           <div className="actions">
@@ -430,12 +457,14 @@ export default function App() {
           </>
         ) : userRole === 'docente' ? (
           <>
-            {teacherTab === 'grades' ? <TeacherGradesView user={me} /> : teacherTab === 'reports' ? <MyReports role="docente" /> : <ProfileView user={me} />}
+            {teacherTab === 'grades' ? <TeacherGradesView user={me} /> : teacherTab === 'schedule' ? <ScheduleView user={me} role="docente" /> : teacherTab === 'reports' ? <MyReports role="docente" /> : <ProfileView user={me} />}
           </>
         ) : userRole === 'estudiante' ? (
           <>
             {studentTab === 'enrollments'
               ? <EnrollmentManager user={me} />
+              : studentTab === 'schedule'
+              ? <ScheduleView user={me} role="estudiante" />
               : studentTab === 'grades'
               ? <GradesView />
               : studentTab === 'history'

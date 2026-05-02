@@ -93,10 +93,11 @@ async def enroll_in_course(
         enrolled_course_ids = [e.course_id for e in active_enrollments]
         
         if enrolled_course_ids:
+            from app.schedule_utils import check_schedule_overlap
             enrolled_courses_data = await get_multiple_course_details(enrolled_course_ids)
             for e_course in enrolled_courses_data:
                 e_schedule = e_course.get("schedule")
-                if e_schedule and e_schedule.strip() == new_schedule.strip():
+                if e_schedule and check_schedule_overlap(e_schedule, new_schedule):
                     raise HTTPException(
                         status_code=400,
                         detail=f"No puedes inscribirte en esta materia porque su horario se cruza con otra materia inscrita ('{e_course.get('name')}')."
