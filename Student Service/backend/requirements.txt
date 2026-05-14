@@ -7,3 +7,5 @@ psycopg[binary]==3.2.13
 python-dotenv==1.0.0
 PyJWT==2.8.0
 httpx==0.25.0
+
+prometheus-fastapi-instrumentator==7.0.0

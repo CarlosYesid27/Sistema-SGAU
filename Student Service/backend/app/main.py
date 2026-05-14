@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 from app.routers import students
@@ -14,6 +15,9 @@ app = FastAPI(
     description="SGAU - Microservicio de Historial Académico y Kardex",
     version="1.0.0"
 )
+
+# Expose Prometheus metrics
+Instrumentator().instrument(app).expose(app)
 
 # Configurar CORS
 app.add_middleware(

@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi.middleware.cors import CORSMiddleware
 import os
 
@@ -10,6 +11,9 @@ from app.routers import payments
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="SGAU Payment Service")
+
+# Expose Prometheus metrics
+Instrumentator().instrument(app).expose(app)
 
 frontend_url = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
 

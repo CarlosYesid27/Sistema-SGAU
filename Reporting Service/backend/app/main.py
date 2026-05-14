@@ -1,5 +1,6 @@
 import os
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import reports
 
@@ -8,6 +9,9 @@ app = FastAPI(
     description="Motor de informes académicos y financieros. Genera reportes en PDF y CSV.",
     version="1.0.0"
 )
+
+# Expose Prometheus metrics
+Instrumentator().instrument(app).expose(app)
 
 frontend_url = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
 

@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
@@ -23,6 +24,9 @@ app = FastAPI(
     description="Microservicio de autenticación y seguridad para el sistema universitario",
     version="1.0.0"
 )
+
+# Expose Prometheus metrics
+Instrumentator().instrument(app).expose(app)
 
 # CORS middleware
 FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")

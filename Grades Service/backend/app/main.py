@@ -3,6 +3,7 @@ main.py — Grades Service
 """
 import os
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
@@ -16,6 +17,9 @@ app = FastAPI(
     description="Microservicio de calificaciones. Registra notas y calcula promedios.",
     version="1.0.0",
 )
+
+# Expose Prometheus metrics
+Instrumentator().instrument(app).expose(app)
 
 # CORS
 FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")

@@ -2,6 +2,7 @@ import os
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
@@ -11,6 +12,9 @@ from .routers.users import router as users_router
 load_dotenv()
 
 app = FastAPI(title="User Service SGAU", version="0.1.0")
+
+# Expose Prometheus metrics
+Instrumentator().instrument(app).expose(app)
 
 frontend_origin = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
 

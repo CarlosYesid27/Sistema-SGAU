@@ -1,0 +1,39 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'auth_service'
+    static_configs:
+      - targets: ['auth_backend:8001']
+
+  - job_name: 'user_service'
+    static_configs:
+      - targets: ['user_backend:8000']
+
+  - job_name: 'course_service'
+    static_configs:
+      - targets: ['course_backend:8000']
+
+  - job_name: 'enrollment_service'
+    static_configs:
+      - targets: ['enrollment_backend:8000']
+
+  - job_name: 'grades_service'
+    static_configs:
+      - targets: ['grades_backend:8000']
+
+  - job_name: 'student_service'
+    static_configs:
+      - targets: ['student_backend:8000']
+
+  - job_name: 'payment_service'
+    static_configs:
+      - targets: ['payment_backend:8000']
+
+  - job_name: 'reporting_service'
+    static_configs:
+      - targets: ['reporting_backend:8000']

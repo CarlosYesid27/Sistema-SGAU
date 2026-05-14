@@ -332,6 +332,37 @@ services:
     networks:
       - sgau-gateway-net
 
+  prometheus:
+    image: prom/prometheus:v2.53.1
+    container_name: sgau_prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    networks:
+      - sgau-gateway-net
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: sgau_grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - sgau-gateway-net
+
 volumes:
   auth_db_data:
   user_db_data:
@@ -340,6 +371,8 @@ volumes:
   grades_db_data:
   student_db_data:
   payment_db_data:
+  prometheus_data:
+  grafana_data:
 
 networks:
   sgau-gateway-net:
