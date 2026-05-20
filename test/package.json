@@ -1,0 +1,27 @@
+{
+  "name": "sistema-sgau-tests",
+  "version": "1.0.0",
+  "description": "Pruebas unitarias y de integración para Sistema SGAU utilizando Jest",
+  "main": "jest.config.js",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "keywords": [
+    "jest",
+    "tests",
+    "sgau"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "jest": "^30.4.1"
+  },
+  "jest": {
+    "testMatch": [
+      "**/test/**/*.test.js"
+    ],
+    "rootDir": "."
+  }
+}
